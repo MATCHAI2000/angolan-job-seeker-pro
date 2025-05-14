@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Job } from '@/types/job';
-import { MapPin, BriefCase, DollarSign, Calendar } from 'lucide-react';
+import { MapPin, Briefcase, DollarSign, Calendar } from 'lucide-react';
 
 interface JobCardProps {
   job: Job;
@@ -60,7 +59,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isGridView }) => {
           )}
           
           <div className="flex items-center text-gray-600">
-            <BriefCase className="h-4 w-4 mr-1" />
+            <Briefcase className="h-4 w-4 mr-1" />
             <span>{job.type}</span>
           </div>
           

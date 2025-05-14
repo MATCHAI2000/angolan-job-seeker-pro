@@ -3,6 +3,22 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Job } from '@/types/job';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
 
 interface StatisticsPanelProps {
   jobs: Job[];
@@ -11,198 +27,60 @@ interface StatisticsPanelProps {
 
 const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ jobs, visible }) => {
   const [activeTab, setActiveTab] = React.useState('geral');
+  const [categoryData, setCategoryData] = React.useState<{name: string, value: number}[]>([]);
+  const [locationData, setLocationData] = React.useState<{name: string, value: number}[]>([]);
+  const [salaryData, setSalaryData] = React.useState<{name: string, value: number}[]>([]);
 
   React.useEffect(() => {
     if (visible && jobs.length > 0) {
-      setTimeout(() => {
-        renderCharts();
-      }, 100);
+      generateChartData();
     }
   }, [visible, jobs, activeTab]);
 
-  const renderCharts = () => {
-    // Limpar canvas existentes para evitar problemas com renderização
-    document.querySelectorAll('canvas').forEach(canvas => {
-      // @ts-ignore
-      if (canvas.chart) {
-        // @ts-ignore
-        canvas.chart.destroy();
-      }
-    });
-
-    if (activeTab === 'geral' || activeTab === 'todas') {
-      renderCategoryChart();
-    }
-    
-    if (activeTab === 'geral' || activeTab === 'localizacao') {
-      renderLocationChart();
-    }
-    
-    if (activeTab === 'geral' || activeTab === 'salario') {
-      renderSalaryChart();
-    }
-  };
-
-  const renderCategoryChart = () => {
-    if (!window.Chart) return;
-    
+  const generateChartData = () => {
+    // Gerar dados para o gráfico de categorias
     const categoryCount: {[key: string]: number} = {};
     jobs.forEach(job => {
       if (job.category) {
         categoryCount[job.category] = (categoryCount[job.category] || 0) + 1;
       }
     });
+    const categories = Object.entries(categoryCount).map(([name, value]) => ({ name, value }));
+    setCategoryData(categories);
 
-    const categories = Object.keys(categoryCount);
-    const counts = Object.values(categoryCount);
-
-    const ctx = document.getElementById('categoryChart') as HTMLCanvasElement;
-    if (!ctx) return;
-
-    // @ts-ignore
-    const chart = new window.Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: categories,
-        datasets: [{
-          label: 'Vagas por Categoria',
-          data: counts,
-          backgroundColor: 'rgba(0, 86, 179, 0.7)',
-          borderColor: 'rgba(0, 86, 179, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              stepSize: 1
-            }
-          }
-        }
-      }
-    });
-
-    // @ts-ignore
-    ctx.chart = chart;
-  };
-
-  const renderLocationChart = () => {
-    if (!window.Chart) return;
-    
+    // Gerar dados para o gráfico de localização
     const locationCount: {[key: string]: number} = {};
     jobs.forEach(job => {
       if (job.location) {
         locationCount[job.location] = (locationCount[job.location] || 0) + 1;
       }
     });
+    const locations = Object.entries(locationCount).map(([name, value]) => ({ name, value }));
+    setLocationData(locations);
 
-    const locations = Object.keys(locationCount);
-    const counts = Object.values(locationCount);
-
-    const ctx = document.getElementById('locationChart') as HTMLCanvasElement;
-    if (!ctx) return;
-
-    // @ts-ignore
-    const chart = new window.Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: locations,
-        datasets: [{
-          data: counts,
-          backgroundColor: [
-            'rgba(0, 86, 179, 0.7)',
-            'rgba(255, 193, 7, 0.7)',
-            'rgba(40, 167, 69, 0.7)',
-            'rgba(220, 53, 69, 0.7)',
-            'rgba(111, 66, 193, 0.7)',
-            'rgba(23, 162, 184, 0.7)',
-          ],
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'right'
-          }
-        }
-      }
-    });
-
-    // @ts-ignore
-    ctx.chart = chart;
-  };
-
-  const renderSalaryChart = () => {
-    if (!window.Chart) return;
-    
-    // Filtrar vagas com salário
+    // Gerar dados para o gráfico de salários
     const jobsWithSalary = jobs.filter(job => job.salary);
     
     if (jobsWithSalary.length === 0) return;
     
     // Definir faixas salariais
     const ranges = [
-      { min: 0, max: 100000, label: '0-100k' },
-      { min: 100000, max: 200000, label: '100k-200k' },
-      { min: 200000, max: 300000, label: '200k-300k' },
-      { min: 300000, max: 400000, label: '300k-400k' },
-      { min: 400000, max: 500000, label: '400k-500k' },
-      { min: 500000, max: Infinity, label: '500k+' }
+      { min: 0, max: 100000, name: '0-100k' },
+      { min: 100000, max: 200000, name: '100k-200k' },
+      { min: 200000, max: 300000, name: '200k-300k' },
+      { min: 300000, max: 400000, name: '300k-400k' },
+      { min: 400000, max: 500000, name: '400k-500k' },
+      { min: 500000, max: Infinity, name: '500k+' }
     ];
     
     const rangeCounts = ranges.map(range => ({
-      ...range,
-      count: jobsWithSalary.filter(job => 
+      name: range.name,
+      value: jobsWithSalary.filter(job => 
         job.salary >= range.min && job.salary < range.max
       ).length
     }));
     
-    const ctx = document.getElementById('salaryChart') as HTMLCanvasElement;
-    if (!ctx) return;
-
-    // @ts-ignore
-    const chart = new window.Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: rangeCounts.map(r => r.label),
-        datasets: [{
-          label: 'Vagas por Faixa Salarial (AOA)',
-          data: rangeCounts.map(r => r.count),
-          backgroundColor: 'rgba(255, 193, 7, 0.7)',
-          borderColor: 'rgba(255, 193, 7, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              stepSize: 1
-            }
-          }
-        }
-      }
-    });
-
-    // @ts-ignore
-    ctx.chart = chart;
+    setSalaryData(rangeCounts);
   };
 
   // Calcular estatísticas
@@ -221,6 +99,8 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ jobs, visible }) => {
       maximumFractionDigits: 0
     }).format(value);
   };
+
+  const COLORS = ['#0056B3', '#FFC107', '#28A745', '#DC3545', '#6F42C1', '#17A2B8'];
 
   if (!visible) return null;
 
@@ -267,21 +147,52 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ jobs, visible }) => {
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
               <h4 className="text-sm font-medium mb-2">Vagas por Categoria</h4>
               <div className="h-40">
-                <canvas id="categoryChart"></canvas>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={categoryData}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#0056B3" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
             
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
               <h4 className="text-sm font-medium mb-2">Vagas por Localização</h4>
               <div className="h-40">
-                <canvas id="locationChart"></canvas>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={locationData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={60}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {locationData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
             
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 md:col-span-2 lg:col-span-1">
               <h4 className="text-sm font-medium mb-2">Distribuição de Salários</h4>
               <div className="h-40">
-                <canvas id="salaryChart"></canvas>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={salaryData}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#FFC107" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </TabsContent>
@@ -290,7 +201,14 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ jobs, visible }) => {
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
               <h4 className="text-sm font-medium mb-2">Vagas por Categoria</h4>
               <div className="h-64">
-                <canvas id="categoryChart"></canvas>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={categoryData}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#0056B3" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </TabsContent>
@@ -299,7 +217,24 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ jobs, visible }) => {
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
               <h4 className="text-sm font-medium mb-2">Vagas por Localização</h4>
               <div className="h-64">
-                <canvas id="locationChart"></canvas>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={locationData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {locationData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </TabsContent>
@@ -308,7 +243,14 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ jobs, visible }) => {
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
               <h4 className="text-sm font-medium mb-2">Distribuição de Salários</h4>
               <div className="h-64">
-                <canvas id="salaryChart"></canvas>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={salaryData}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#FFC107" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </TabsContent>
